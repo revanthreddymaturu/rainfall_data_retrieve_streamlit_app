@@ -7,6 +7,17 @@ from datetime import datetime
 # Constants
 API_BASE_URL = "https://api.open-meteo.com/v1/forecast"
 
+# Function to convert wind direction angle to direction letter
+def angle_to_direction(angle):
+    directions = [
+        "N", "NNE", "NE", "ENE", 
+        "E", "ESE", "SE", "SSE",
+        "S", "SSW", "SW", "WSW",
+        "W", "WNW", "NW", "NNW"
+    ]
+    index = int((angle + 11.25) / 22.5) % 16
+    return directions[index]
+
 # Function to calculate daily averaged wind direction
 def calculate_daily_averaged_wind_direction(hourly_directions):
     radians = np.deg2rad(hourly_directions)
@@ -39,6 +50,7 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
         "wind_speed_10m": response['hourly']['wind_speed_10m'],
         "wind_direction_10m": response['hourly']['wind_direction_10m']
     })
+    hourly_data['wind_direction_letter'] = hourly_data['wind_direction_10m'].apply(angle_to_direction)
 
     # Group by date to calculate daily aggregates for wind
     hourly_data['date_only'] = hourly_data['date'].dt.floor('d')
@@ -46,6 +58,7 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
         'wind_speed_10m': 'mean',
         'wind_direction_10m': calculate_daily_averaged_wind_direction
     }).reset_index()
+    daily_wind_aggregates['wind_direction_letter'] = daily_wind_aggregates['wind_direction_10m'].apply(angle_to_direction)
 
     # Parse daily data
     daily_data = pd.DataFrame({
@@ -78,11 +91,11 @@ def main():
 
             # Display hourly data graph
             st.subheader("Hourly Data")
-            st.line_chart(hourly_data.set_index("date")[['hourly_precipitation', 'hourly_rain', 'wind_speed_10m']])
+            st.line_chart(hourly_data.set_index("date")[['hourly_precipitation', 'hourly_rain']])
 
             # Display daily data graph
             st.subheader("Daily Data")
-            st.line_chart(daily_data.set_index("date")[['precipitation_sum', 'rain_sum', 'average_wind_speed', 'average_wind_direction']])
+            st.line_chart(daily_data.set_index("date")[['precipitation_sum', 'rain_sum']])
 
             # Download CSV files
             st.subheader("Download Data")

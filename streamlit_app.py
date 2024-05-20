@@ -76,7 +76,7 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
 
 # Streamlit app main function
 def main():
-    st.title("Weather Data Analysis")
+    st.title("Weather Data(Rainfall, Wind Speed and Direction)")
 
     # User input
     latitude = st.number_input("Enter Latitude", value=38.9282)

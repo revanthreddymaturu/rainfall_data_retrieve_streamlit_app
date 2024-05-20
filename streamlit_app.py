@@ -31,9 +31,9 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
     }
     response = requests.get(API_BASE_URL, params=params).json()
 
-    # Extract hourly data
+    # Parse hourly data
     hourly_data = pd.DataFrame({
-        "date": pd.to_datetime(response['hourly']['time'], unit='s'),
+        "date": pd.to_datetime(response['hourly']['time']),
         "hourly_precipitation": response['hourly']['precipitation'],
         "hourly_rain": response['hourly']['rain'],
         "wind_speed_10m": response['hourly']['wind_speed_10m'],
@@ -41,20 +41,20 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
     })
 
     # Group by date to calculate daily aggregates for wind
-    hourly_data['date_only'] = hourly_data['date'].dt.floor('d')  # Normalize date to days for grouping
+    hourly_data['date_only'] = hourly_data['date'].dt.floor('d')
     daily_wind_aggregates = hourly_data.groupby('date_only').agg({
         'wind_speed_10m': 'mean',
         'wind_direction_10m': calculate_daily_averaged_wind_direction
     }).reset_index()
 
-    # Extract daily summaries directly from the API
+    # Parse daily data
     daily_data = pd.DataFrame({
-        "date": pd.to_datetime(response['daily']['time'], unit='s'),
+        "date": pd.to_datetime(response['daily']['time']),
         "precipitation_sum": response['daily']['precipitation_sum'],
         "rain_sum": response['daily']['rain_sum']
     })
 
-    # Combine wind data with daily precipitation and rain summaries
+    # Combine data
     daily_data = daily_data.merge(daily_wind_aggregates, left_on='date', right_on='date_only', how='left')
     daily_data.drop(columns='date_only', inplace=True)
     daily_data.rename(columns={'wind_speed_10m': 'average_wind_speed', 'wind_direction_10m': 'average_wind_direction'}, inplace=True)
@@ -63,7 +63,7 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
 
 # Streamlit app main function
 def main():
-    st.title("Weather Data")
+    st.title("Weather Data Analysis")
 
     # User input
     latitude = st.number_input("Enter Latitude", value=38.9282)
@@ -72,21 +72,24 @@ def main():
     end_date = st.date_input("Enter End Date", value=datetime.today())
 
     if st.button("Request Data"):
-        # Fetch weather data
-        hourly_data, daily_data = fetch_weather_data(latitude, longitude, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+        try:
+            # Fetch weather data
+            hourly_data, daily_data = fetch_weather_data(latitude, longitude, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
 
-        # Display hourly data graph
-        st.subheader("Hourly Data")
-        st.line_chart(hourly_data.set_index("date")[['hourly_precipitation', 'hourly_rain', 'wind_speed_10m']])
+            # Display hourly data graph
+            st.subheader("Hourly Data")
+            st.line_chart(hourly_data.set_index("date")[['hourly_precipitation', 'hourly_rain', 'wind_speed_10m']])
 
-        # Display daily data graph
-        st.subheader("Daily Data")
-        st.line_chart(daily_data.set_index("date")[['precipitation_sum', 'rain_sum', 'average_wind_speed', 'average_wind_direction']])
+            # Display daily data graph
+            st.subheader("Daily Data")
+            st.line_chart(daily_data.set_index("date")[['precipitation_sum', 'rain_sum', 'average_wind_speed', 'average_wind_direction']])
 
-        # Download CSV files
-        st.subheader("Download Data")
-        st.download_button("Download Hourly Data CSV", hourly_data.to_csv(index=False), "hourly_data.csv")
-        st.download_button("Download Daily Data CSV", daily_data.to_csv(index=False), "daily_data.csv")
+            # Download CSV files
+            st.subheader("Download Data")
+            st.download_button("Download Hourly Data CSV", hourly_data.to_csv(index=False), "hourly_data.csv")
+            st.download_button("Download Daily Data CSV", daily_data.to_csv(index=False), "daily_data.csv")
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()

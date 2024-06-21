@@ -5,7 +5,7 @@ import requests
 from datetime import datetime
 
 # Constants
-API_BASE_URL = "https://archive-api.open-meteo.com/v1/archive"
+API_BASE_URL = "https://api.open-meteo.com/v1/forecast"
 
 # Function to convert wind direction angle to direction letter
 def angle_to_direction(angle):
@@ -36,11 +36,9 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
         "longitude": longitude,
         "start_date": start_date,
         "end_date": end_date,
-        "hourly": ["precipitation,rain,wind_speed_10m,wind_direction_10m"],
-        "daily": ["precipitation_sum,rain_sum"],
-        "wind_speed_unit": "mph",
-        "timezone": "America/New_York",
-
+        "hourly": "precipitation,rain,wind_speed_10m,wind_direction_10m",
+        "daily": "precipitation_sum,rain_sum",
+        "timezone": "America/New_York"
     }
     response = requests.get(API_BASE_URL, params=params).json()
 

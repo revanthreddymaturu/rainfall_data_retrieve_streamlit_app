@@ -23,8 +23,8 @@ def calculate_daily_averaged_wind_direction(hourly_directions):
     radians = np.deg2rad(hourly_directions)
     u_components = np.cos(radians)
     v_components = np.sin(radians)
-    mean_u = np.mean(u_components)
-    mean_v = np.mean(v_components)
+    mean_u = np.nanmean(u_components)
+    mean_v = np.nanmean(v_components)
     avg_direction_rad = np.arctan2(mean_v, mean_u)
     avg_direction_deg = np.rad2deg(avg_direction_rad)
     return avg_direction_deg % 360
@@ -40,7 +40,6 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
         "daily": ["precipitation_sum,rain_sum"],
         "wind_speed_unit": "mph",
         "timezone": "America/New_York",
-
     }
     response = requests.get(API_BASE_URL, params=params).json()
 
@@ -56,6 +55,7 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
 
     # Group by date to calculate daily aggregates for wind
     hourly_data['date_only'] = hourly_data['date'].dt.floor('d')
+    hourly_data = hourly_data.replace([np.inf, -np.inf], np.nan).dropna(subset=['wind_direction_10m'])
     daily_wind_aggregates = hourly_data.groupby('date_only').agg({
         'wind_speed_10m': 'mean',
         'wind_direction_10m': calculate_daily_averaged_wind_direction
@@ -78,7 +78,7 @@ def fetch_weather_data(latitude, longitude, start_date, end_date):
 
 # Streamlit app main function
 def main():
-    st.title("Weather Data(Rainfall, Wind Speed and Direction)")
+    st.title("Weather Data (Rainfall, Wind Speed, and Direction)")
 
     # User input
     latitude = st.number_input("Enter Latitude", value=38.9282)
